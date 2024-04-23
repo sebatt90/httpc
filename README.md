@@ -5,11 +5,3 @@ So far the server can only send HTML files as responses.
 
 I know there probabily still are ways to make it crash, so if you find a way to trigger it, post an Issue detailing how the crash is achieved and I'll try to fix it.
 
-## Using it:
-Edit the file `build.py` to change compilation parameters.
-```sh
-./build.py
-make
-cd ./build
-./http [FOLDER CONTAINING THE SERVER FILES]
-```
