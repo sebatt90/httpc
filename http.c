@@ -45,6 +45,23 @@ char* openfile(const char* filepath){
     return str;
 }
 
+char* http_head(char* headers_str, char* header){
+    if(headers_str == NULL){
+        char* nheaders_str = (char*)malloc(sizeof(char)*strlen(header)+2);
+        *nheaders_str = '\0';
+        strncat(nheaders_str, header, sizeof(char)*strlen(header));
+        return nheaders_str;
+    }
+
+    //printf("%ld\n", (sizeof(char)*strlen(headers_str))+(sizeof(char)*strlen(header))+2);
+    char* nheaders_str = (char*)malloc((sizeof(char)*strlen(headers_str))+(sizeof(char)*strlen(header))+2);
+    *nheaders_str = '\0';
+    strncat(nheaders_str, headers_str, sizeof(char)*strlen(headers_str));
+    strncat(nheaders_str, "\n",sizeof(char));
+    strncat(nheaders_str, header, sizeof(char)*strlen(header));
+    free(headers_str);
+    return nheaders_str;
+}
 
 char* process_req(char* req){
     // Example: GET / HTTP/1.1
@@ -55,11 +72,14 @@ char* process_req(char* req){
     char* http_version = strtok(NULL, " ");
     if(http_version == NULL) return req_error();
 
-    char* fpath = (strcmp(route, "/")==0) ? "/index.html" : route;
+    // hack to declare string on stack :P
+    char index[] = "/index.html";
+    char* fpath = (strcmp(route, "/")==0) ? index : route;
     
 
     char* file = openfile(fpath);
 
+    // 404'd 
     if(file == NULL){
         char* head = "HTTP/1.1 400 OK\nServer: httpc\nContent-Type: text/html\n\n";
         char* res = (char*)malloc((sizeof(char)*sizeof(head))+(sizeof(char)*sizeof("404 Content Not Found")));
@@ -68,12 +88,42 @@ char* process_req(char* req){
         return res;
     }
 
-    char head[] = "HTTP/1.1 200 OK\nServer: httpc\nContent-Type: text/html\n\n";
+    char head[] = "HTTP/1.1 200 OK\n";
 
-    // TODO: handle multiple file types other than html...
+    // temporary solution to handle html, js, json, css and png
+    char* headers = NULL;
+    headers = http_head(headers, "Server: httpc");
 
-    char* res = (char*)malloc((sizeof(char)*sizeof(head))+(sizeof(char)*strlen(file))+2);
-    strncpy(res, head, sizeof(head));
+    char* ext = strtok(fpath, ".");
+    ext = strtok(NULL, ".");
+
+    // temporary solution :D
+    if(ext == NULL){
+        headers = http_head(headers, "Content-Type: text/plain");
+    }
+    if(strcmp(ext, "html")== 0){
+       headers = http_head(headers, "Content-Type: text/html"); 
+    }
+    else if(strcmp(ext, "js")== 0){
+        headers = http_head(headers, "Content-Type: text/javascript");
+    }
+    else if(strcmp(ext, "css")== 0){
+        headers = http_head(headers, "Content-Type: text/css");
+    }
+    else if(strcmp(ext, "json")== 0){
+        headers = http_head(headers, "Content-Type: application/json");
+    }
+    else if(strcmp(ext, "png")== 0){
+        headers = http_head(headers, "Content-Type: image/png");
+    } else headers = http_head(headers, "Content-Type: text/plain");
+
+    // endsection
+
+    char* res = (char*)malloc((sizeof(char)*sizeof(head))+(sizeof(char)*strlen(headers))+(sizeof(char)*strlen(file))+8);
+    *res = '\0';
+    strncat(res, head, sizeof(char)*sizeof(head));
+    strncat(res, headers, strlen(headers));
+    strncat(res, "\n\n", sizeof(char)*2);
     strncat(res, file, strlen(file));
 
     return res;
