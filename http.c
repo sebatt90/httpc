@@ -21,6 +21,7 @@ char* req_error(){
 }
 
 int sfd;
+int connfd;
 
 char* folder;
 
@@ -72,19 +73,21 @@ char* process_req(char* req){
     char* http_version = strtok(NULL, " ");
     if(http_version == NULL) return req_error();
 
-    // hack to declare string on stack :P
-    char index[] = "/index.html";
-    char* fpath = (strcmp(route, "/")==0) ? index : route;
+    char* fpath = (strcmp(route, "/")==0) ? "/index.html" : route;
     
 
     char* file = openfile(fpath);
 
     // 404'd 
     if(file == NULL){
-        char* head = "HTTP/1.1 400 OK\nServer: httpc\nContent-Type: text/html\n\n";
-        char* res = (char*)malloc((sizeof(char)*sizeof(head))+(sizeof(char)*sizeof("404 Content Not Found")));
-        strcpy(res, head);
-        strcat(res, "404 Content Not Found\0");
+        char* head = "HTTP/1.1 404 OK\nServer: httpc\nContent-Type: text/html\n\n\
+        <h1 style='text-align: center;'>404 Not Found</h1>\
+        <hr/>\
+        <p style='text-align: center;'>httpc dev</p>";
+
+        char* res = (char*)malloc((sizeof(char)*strlen(head))+1);
+        *res = '\0';
+        strncat(res, head, sizeof(char)*strlen(head));
         return res;
     }
 
@@ -93,6 +96,11 @@ char* process_req(char* req){
     // temporary solution to handle html, js, json, css and png
     char* headers = NULL;
     headers = http_head(headers, "Server: httpc");
+    
+    char* tmp = fpath;
+    fpath = (char*) malloc(strlen(tmp)+1);
+    *fpath='\0';
+    strncat(fpath, tmp, sizeof(char)*strlen(tmp)); 
 
     char* ext = strtok(fpath, ".");
     ext = strtok(NULL, ".");
@@ -101,22 +109,21 @@ char* process_req(char* req){
     if(ext == NULL){
         headers = http_head(headers, "Content-Type: text/plain");
     }
-    if(strcmp(ext, "html")== 0){
+    if(strcmp(ext, "html") == 0){
        headers = http_head(headers, "Content-Type: text/html"); 
     }
-    else if(strcmp(ext, "js")== 0){
+    else if(strcmp(ext, "js") == 0){
         headers = http_head(headers, "Content-Type: text/javascript");
     }
-    else if(strcmp(ext, "css")== 0){
+    else if(strcmp(ext, "css") == 0){
         headers = http_head(headers, "Content-Type: text/css");
     }
-    else if(strcmp(ext, "json")== 0){
+    else if(strcmp(ext, "json") == 0){
         headers = http_head(headers, "Content-Type: application/json");
     }
-    else if(strcmp(ext, "png")== 0){
+    else if(strcmp(ext, "png") == 0){
         headers = http_head(headers, "Content-Type: image/png");
     } else headers = http_head(headers, "Content-Type: text/plain");
-
     // endsection
 
     char* res = (char*)malloc((sizeof(char)*sizeof(head))+(sizeof(char)*strlen(headers))+(sizeof(char)*strlen(file))+8);
@@ -126,6 +133,7 @@ char* process_req(char* req){
     strncat(res, "\n\n", sizeof(char)*2);
     strncat(res, file, strlen(file));
 
+    free(headers);
     return res;
 }
 
@@ -156,7 +164,6 @@ void http_init(unsigned short port, const char* content){
 }
 
 void http_accept() {
-    int connfd;
     struct sockaddr_in cliaddr;
     unsigned int cliaddr_len = sizeof(cliaddr);
 
@@ -178,7 +185,7 @@ void http_accept() {
         return;
     }
 
-
+    // TODO: add control in order to avoid crashing the server
     char* res = process_req(req);
 
     if(write(connfd, res, strlen(res)+1) == -1){
@@ -191,5 +198,6 @@ void http_accept() {
 }
 
 void http_close(){
+    close(connfd);
     close(sfd);
 }

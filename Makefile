@@ -1,6 +1,6 @@
 http: http.o main.o 
 	mkdir -p ./build
-	clang -o ./build/http -L. -I.  -g -Wwarnings http.o main.o 
+	clang -o ./build/http -L. -I. -g -Wwarnings http.o main.o 
 
 http.o: http.c
 	clang -c http.c
