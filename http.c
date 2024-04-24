@@ -188,7 +188,7 @@ void http_accept() {
     // TODO: add control in order to avoid crashing the server
     char* res = process_req(req);
 
-    if(write(connfd, res, strlen(res)+1) == -1){
+    if(write(connfd, res, strlen(res)) == -1){
         // error
         printf( "An error has occured while writing to HTTP Client\n");
         return;
